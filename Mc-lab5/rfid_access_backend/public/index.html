@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <title>RFID Адмінка</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h1>RFID Адмінка</h1>
+  <nav>
+    <button onclick="showTab('logs')">Журнал</button>
+    <button onclick="showTab('users')">Користувачі</button>
+    <button onclick="showTab('add')">Додати UID</button>
+  </nav>
+
+  <section id="logs" class="tab">
+    <h2>Журнал зчитувань</h2>
+    <table id="logTable">
+      <thead>
+        <tr><th>UID</th><th>Результат</th><th>Час</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </section>
+
+  <section id="users" class="tab" style="display:none;">
+    <h2>Список користувачів</h2>
+    <table id="userTable">
+      <thead>
+        <tr><th>UID</th><th>Ім'я</th><th>Дія</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </section>
+
+  <section id="add" class="tab" style="display:none;">
+    <h2>Додати нового користувача</h2>
+    <input type="text" id="uidInput" placeholder="UID">
+    <input type="text" id="nameInput" placeholder="Ім'я">
+    <button onclick="addUser()">Додати</button>
+  </section>
+
+  <script>
+    function showTab(tabId) {
+      document.querySelectorAll('.tab').forEach(t => t.style.display = 'none');
+      document.getElementById(tabId).style.display = 'block';
+      if (tabId === 'logs') loadLogs();
+      if (tabId === 'users') loadUsers();
+    }
+
+    function loadLogs() {
+      fetch('/logs')
+        .then(res => res.json())
+        .then(data => {
+          const tbody = document.querySelector('#logTable tbody');
+          tbody.innerHTML = '';
+          data.forEach(row => {
+            tbody.innerHTML += `<tr><td>${row.uid}</td><td>${row.result}</td><td>${row.timestamp}</td></tr>`;
+          });
+        });
+    }
+
+    function loadUsers() {
+      fetch('/users')
+        .then(res => res.json())
+        .then(data => {
+          const tbody = document.querySelector('#userTable tbody');
+          tbody.innerHTML = '';
+          data.forEach(row => {
+            tbody.innerHTML += `<tr><td>${row.uid}</td><td>${row.name}</td><td><button onclick="deleteUser('${row.uid}')">Видалити</button></td></tr>`;
+          });
+        });
+    }
+
+    function deleteUser(uid) {
+      fetch('/delete-uid', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ uid })
+      }).then(() => loadUsers());
+    }
+
+    function addUser() {
+      const uid = document.getElementById('uidInput').value.trim();
+      const name = document.getElementById('nameInput').value.trim();
+      if (!uid || !name) return alert('Введи UID та ім’я');
+
+      fetch('/add-uid', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ uid, name })
+      }).then(() => {
+        document.getElementById('uidInput').value = '';
+        document.getElementById('nameInput').value = '';
+        loadUsers();
+        showTab('users');
+      });
+    }
+
+    window.onload = () => showTab('logs');
+  </script>
+</body>
+</html>
